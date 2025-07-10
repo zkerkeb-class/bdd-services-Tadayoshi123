@@ -1,0 +1,1221 @@
+{
+  "openapi": "3.0.0",
+  "info": {
+    "title": "SupervIA DB Service API",
+    "version": "1.0.0",
+    "description": "API REST centralisée pour la gestion de la base de données PostgreSQL de l'écosystème SupervIA.",
+    "contact": {
+      "name": "SupervIA Team",
+      "email": "contact@supervia.com"
+    }
+  },
+  "servers": [
+    {
+      "url": "http://localhost:3002",
+      "description": "Serveur de développement"
+    }
+  ],
+  "components": {
+    "securitySchemes": {
+      "ServiceAuth": {
+        "type": "http",
+        "scheme": "bearer",
+        "bearerFormat": "JWT",
+        "description": "Authentification JWT inter-services. Le token est généré par un autre service (ex: auth-service) et contient les permissions nécessaires."
+      }
+    },
+    "schemas": {
+      "Client": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "name": {
+            "type": "string"
+          },
+          "clientId": {
+            "type": "string"
+          },
+          "redirectUris": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "allowedScopes": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "ownerId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "active": {
+            "type": "boolean"
+          },
+          "createdAt": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "updatedAt": {
+            "type": "string",
+            "format": "date-time"
+          }
+        }
+      },
+      "RefreshToken": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "token": {
+            "type": "string"
+          },
+          "userId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "clientId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "issuedAt": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "expiresAt": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "revokedAt": {
+            "type": "string",
+            "format": "date-time",
+            "nullable": true
+          }
+        }
+      },
+      "User": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid",
+            "description": "ID unique de l'utilisateur"
+          },
+          "email": {
+            "type": "string",
+            "format": "email",
+            "description": "Adresse email de l'utilisateur"
+          },
+          "firstName": {
+            "type": "string",
+            "description": "Prénom de l'utilisateur"
+          },
+          "lastName": {
+            "type": "string",
+            "description": "Nom de famille de l'utilisateur"
+          },
+          "picture": {
+            "type": "string",
+            "format": "uri",
+            "description": "URL de la photo de profil"
+          },
+          "active": {
+            "type": "boolean",
+            "description": "Statut actif/inactif de l'utilisateur"
+          },
+          "emailVerified": {
+            "type": "boolean",
+            "description": "Email vérifié ou non"
+          },
+          "roles": {
+            "type": "array",
+            "items": {
+              "type": "string",
+              "enum": [
+                "USER",
+                "ADMIN",
+                "MODERATOR"
+              ]
+            },
+            "description": "Rôles de l'utilisateur"
+          },
+          "createdAt": {
+            "type": "string",
+            "format": "date-time",
+            "description": "Date de création"
+          },
+          "updatedAt": {
+            "type": "string",
+            "format": "date-time",
+            "description": "Date de dernière mise à jour"
+          }
+        }
+      },
+      "CreateUserRequest": {
+        "type": "object",
+        "required": [
+          "email",
+          "password"
+        ],
+        "properties": {
+          "email": {
+            "type": "string",
+            "format": "email"
+          },
+          "password": {
+            "type": "string",
+            "minLength": 8
+          },
+          "firstName": {
+            "type": "string"
+          },
+          "lastName": {
+            "type": "string"
+          },
+          "picture": {
+            "type": "string"
+          },
+          "roles": {
+            "type": "array",
+            "items": {
+              "type": "string",
+              "enum": [
+                "USER",
+                "ADMIN",
+                "MODERATOR"
+              ]
+            }
+          }
+        }
+      },
+      "UpdateUserRequest": {
+        "type": "object",
+        "properties": {
+          "firstName": {
+            "type": "string"
+          },
+          "lastName": {
+            "type": "string"
+          },
+          "picture": {
+            "type": "string"
+          },
+          "active": {
+            "type": "boolean"
+          },
+          "emailVerified": {
+            "type": "boolean"
+          },
+          "roles": {
+            "type": "array",
+            "items": {
+              "type": "string",
+              "enum": [
+                "USER",
+                "ADMIN",
+                "MODERATOR"
+              ]
+            }
+          }
+        }
+      }
+    }
+  },
+  "security": [
+    {
+      "ServiceAuth": []
+    }
+  ],
+  "paths": {
+    "/api/v1/clients": {
+      "post": {
+        "summary": "Créer un nouveau client OAuth",
+        "tags": [
+          "Clients"
+        ],
+        "security": [
+          {
+            "ServiceAuth": []
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": [
+                  "name",
+                  "redirectUris",
+                  "allowedScopes",
+                  "ownerId"
+                ],
+                "properties": {
+                  "name": {
+                    "type": "string"
+                  },
+                  "redirectUris": {
+                    "type": "array",
+                    "items": {
+                      "type": "string"
+                    }
+                  },
+                  "allowedScopes": {
+                    "type": "array",
+                    "items": {
+                      "type": "string"
+                    }
+                  },
+                  "ownerId": {
+                    "type": "string",
+                    "format": "uuid"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Client créé avec succès"
+          }
+        }
+      }
+    },
+    "/api/v1/clients/{id}": {
+      "get": {
+        "summary": "Récupérer un client par ID",
+        "tags": [
+          "Clients"
+        ],
+        "security": [
+          {
+            "ServiceAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "in": "path",
+            "name": "id",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Client trouvé"
+          }
+        }
+      },
+      "put": {
+        "summary": "Mettre à jour un client",
+        "tags": [
+          "Clients"
+        ],
+        "security": [
+          {
+            "ServiceAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "in": "path",
+            "name": "id",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "name": {
+                    "type": "string"
+                  },
+                  "redirectUris": {
+                    "type": "array",
+                    "items": {
+                      "type": "string"
+                    }
+                  },
+                  "allowedScopes": {
+                    "type": "array",
+                    "items": {
+                      "type": "string"
+                    }
+                  },
+                  "active": {
+                    "type": "boolean"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Client mis à jour"
+          }
+        }
+      },
+      "delete": {
+        "summary": "Supprimer un client",
+        "tags": [
+          "Clients"
+        ],
+        "security": [
+          {
+            "ServiceAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "in": "path",
+            "name": "id",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Client supprimé"
+          }
+        }
+      }
+    },
+    "/api/v1/clients/by-client-id/{clientId}": {
+      "get": {
+        "summary": "Récupérer un client par clientId",
+        "tags": [
+          "Clients"
+        ],
+        "security": [
+          {
+            "ServiceAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "in": "path",
+            "name": "clientId",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Client trouvé"
+          }
+        }
+      }
+    },
+    "/api/v1/keys/jwks": {
+      "get": {
+        "summary": "Récupérer le JWKS (JSON Web Key Set)",
+        "tags": [
+          "Keys"
+        ],
+        "description": "Cet endpoint public fournit les clés publiques pour la vérification des JWT.",
+        "responses": {
+          "200": {
+            "description": "JWKS récupéré avec succès."
+          },
+          "500": {
+            "description": "Erreur lors de la génération du JWKS."
+          }
+        }
+      }
+    },
+    "/api/v1/keys/rotate": {
+      "post": {
+        "summary": "Forcer la rotation des clés de signature",
+        "tags": [
+          "Keys"
+        ],
+        "security": [
+          {
+            "ServiceAuth": []
+          }
+        ],
+        "description": "Invalide la clé active actuelle et en génère une nouvelle.",
+        "responses": {
+          "201": {
+            "description": "Rotation des clés effectuée avec succès."
+          },
+          "400": {
+            "description": "Clés publique ou privée manquantes."
+          },
+          "403": {
+            "description": "Permissions insuffisantes."
+          }
+        }
+      }
+    },
+    "/api/v1/keys": {
+      "post": {
+        "summary": "Créer une nouvelle paire de clés",
+        "tags": [
+          "Keys"
+        ],
+        "security": [
+          {
+            "ServiceAuth": []
+          }
+        ],
+        "description": "Crée une nouvelle paire de clés et la définit comme active. L'ancienne clé active est marquée comme \"deprecated\". Ceci est typiquement appelé par le service d'authentification.",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": [
+                  "publicKey",
+                  "privateKey"
+                ],
+                "properties": {
+                  "publicKey": {
+                    "type": "string",
+                    "description": "La clé publique au format PEM."
+                  },
+                  "privateKey": {
+                    "type": "string",
+                    "description": "La clé privée au format PEM."
+                  },
+                  "algorithm": {
+                    "type": "string",
+                    "default": "RS256"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Paire de clés créée avec succès."
+          }
+        }
+      }
+    },
+    "/api/v1/keys/active": {
+      "get": {
+        "summary": "Récupérer la paire de clés active",
+        "tags": [
+          "Keys"
+        ],
+        "security": [
+          {
+            "ServiceAuth": []
+          }
+        ],
+        "description": "Récupère la paire de clés actuellement active (publique et privée). Uniquement accessible par les services internes de confiance comme le service d'authentification.",
+        "responses": {
+          "200": {
+            "description": "Paire de clés active récupérée."
+          },
+          "404": {
+            "description": "Aucune clé active n'a été trouvée."
+          }
+        }
+      }
+    },
+    "/api/v1/refresh-tokens": {
+      "post": {
+        "summary": "Créer un nouveau refresh token",
+        "tags": [
+          "RefreshTokens"
+        ],
+        "security": [
+          {
+            "ServiceAuth": []
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": [
+                  "userId",
+                  "expiresAt"
+                ],
+                "properties": {
+                  "userId": {
+                    "type": "string",
+                    "format": "uuid"
+                  },
+                  "clientId": {
+                    "type": "string",
+                    "format": "uuid"
+                  },
+                  "expiresAt": {
+                    "type": "string",
+                    "format": "date-time"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Refresh token créé avec succès"
+          }
+        }
+      }
+    },
+    "/api/v1/refresh-tokens/by-token/{token}": {
+      "get": {
+        "summary": "Récupérer un refresh token par sa valeur",
+        "tags": [
+          "RefreshTokens"
+        ],
+        "security": [
+          {
+            "ServiceAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "in": "path",
+            "name": "token",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Refresh token trouvé"
+          },
+          "404": {
+            "description": "Token non trouvé ou expiré"
+          }
+        }
+      }
+    },
+    "/api/v1/refresh-tokens/user/{userId}": {
+      "get": {
+        "summary": "Récupérer tous les refresh tokens d'un utilisateur",
+        "tags": [
+          "RefreshTokens"
+        ],
+        "security": [
+          {
+            "ServiceAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "in": "path",
+            "name": "userId",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          {
+            "in": "query",
+            "name": "includeRevoked",
+            "schema": {
+              "type": "boolean",
+              "default": false
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Liste des refresh tokens"
+          }
+        }
+      }
+    },
+    "/api/v1/refresh-tokens/{id}/revoke": {
+      "post": {
+        "summary": "Révoquer un refresh token",
+        "tags": [
+          "RefreshTokens"
+        ],
+        "security": [
+          {
+            "ServiceAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "in": "path",
+            "name": "id",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Token révoqué avec succès"
+          }
+        }
+      }
+    },
+    "/api/v1/refresh-tokens/revoke-by-token": {
+      "post": {
+        "summary": "Révoquer un refresh token par sa valeur",
+        "tags": [
+          "RefreshTokens"
+        ],
+        "security": [
+          {
+            "ServiceAuth": []
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": [
+                  "token"
+                ],
+                "properties": {
+                  "token": {
+                    "type": "string"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Token révoqué avec succès"
+          }
+        }
+      }
+    },
+    "/api/v1/refresh-tokens/user/{userId}/revoke-all": {
+      "post": {
+        "summary": "Révoquer tous les refresh tokens d'un utilisateur",
+        "tags": [
+          "RefreshTokens"
+        ],
+        "security": [
+          {
+            "ServiceAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "in": "path",
+            "name": "userId",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Tous les tokens révoqués"
+          }
+        }
+      }
+    },
+    "/api/v1/refresh-tokens/cleanup-expired": {
+      "delete": {
+        "summary": "Nettoyer les refresh tokens expirés",
+        "tags": [
+          "RefreshTokens"
+        ],
+        "security": [
+          {
+            "ServiceAuth": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Tokens expirés supprimés"
+          }
+        }
+      }
+    },
+    "/api/v1/users": {
+      "post": {
+        "summary": "Créer un nouvel utilisateur",
+        "tags": [
+          "Users"
+        ],
+        "security": [
+          {
+            "ServiceAuth": []
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CreateUserRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Utilisateur créé avec succès",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "success": {
+                      "type": "boolean"
+                    },
+                    "message": {
+                      "type": "string"
+                    },
+                    "data": {
+                      "$ref": "#/components/schemas/User"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Erreur de validation"
+          },
+          "409": {
+            "description": "Email déjà utilisé"
+          }
+        }
+      },
+      "get": {
+        "summary": "Rechercher des utilisateurs",
+        "tags": [
+          "Users"
+        ],
+        "security": [
+          {
+            "ServiceAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "in": "query",
+            "name": "search",
+            "schema": {
+              "type": "string"
+            },
+            "description": "Recherche par email, prénom ou nom"
+          },
+          {
+            "in": "query",
+            "name": "role",
+            "schema": {
+              "type": "string",
+              "enum": [
+                "USER",
+                "ADMIN",
+                "MODERATOR"
+              ]
+            },
+            "description": "Filtrer par rôle"
+          },
+          {
+            "in": "query",
+            "name": "active",
+            "schema": {
+              "type": "boolean"
+            },
+            "description": "Filtrer par statut actif"
+          },
+          {
+            "in": "query",
+            "name": "limit",
+            "schema": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 100,
+              "default": 20
+            },
+            "description": "Nombre maximum de résultats"
+          },
+          {
+            "in": "query",
+            "name": "offset",
+            "schema": {
+              "type": "integer",
+              "minimum": 0,
+              "default": 0
+            },
+            "description": "Décalage pour la pagination"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Liste des utilisateurs",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "success": {
+                      "type": "boolean"
+                    },
+                    "data": {
+                      "type": "array",
+                      "items": {
+                        "$ref": "#/components/schemas/User"
+                      }
+                    },
+                    "pagination": {
+                      "type": "object",
+                      "properties": {
+                        "total": {
+                          "type": "integer"
+                        },
+                        "limit": {
+                          "type": "integer"
+                        },
+                        "offset": {
+                          "type": "integer"
+                        },
+                        "hasNext": {
+                          "type": "boolean"
+                        },
+                        "hasPrevious": {
+                          "type": "boolean"
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/users/email/{email}": {
+      "get": {
+        "summary": "Récupérer un utilisateur par email",
+        "tags": [
+          "Users"
+        ],
+        "security": [
+          {
+            "ServiceAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "in": "path",
+            "name": "email",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "email"
+            },
+            "description": "Email de l'utilisateur"
+          },
+          {
+            "in": "query",
+            "name": "includePassword",
+            "schema": {
+              "type": "boolean",
+              "default": false
+            },
+            "description": "Inclure le mot de passe haché"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Utilisateur trouvé",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "success": {
+                      "type": "boolean"
+                    },
+                    "data": {
+                      "$ref": "#/components/schemas/User"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Utilisateur non trouvé"
+          }
+        }
+      }
+    },
+    "/api/v1/users/{id}": {
+      "get": {
+        "summary": "Récupérer un utilisateur par ID",
+        "tags": [
+          "Users"
+        ],
+        "security": [
+          {
+            "ServiceAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "in": "path",
+            "name": "id",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "description": "ID de l'utilisateur"
+          },
+          {
+            "in": "query",
+            "name": "includePassword",
+            "schema": {
+              "type": "boolean",
+              "default": false
+            },
+            "description": "Inclure le mot de passe haché"
+          },
+          {
+            "in": "query",
+            "name": "includeRefreshTokens",
+            "schema": {
+              "type": "boolean",
+              "default": false
+            },
+            "description": "Inclure les refresh tokens"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Utilisateur trouvé",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "success": {
+                      "type": "boolean"
+                    },
+                    "data": {
+                      "$ref": "#/components/schemas/User"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Utilisateur non trouvé"
+          }
+        }
+      },
+      "put": {
+        "summary": "Mettre à jour un utilisateur",
+        "tags": [
+          "Users"
+        ],
+        "security": [
+          {
+            "ServiceAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "in": "path",
+            "name": "id",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "description": "ID de l'utilisateur"
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/UpdateUserRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Utilisateur mis à jour avec succès",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "success": {
+                      "type": "boolean"
+                    },
+                    "message": {
+                      "type": "string"
+                    },
+                    "data": {
+                      "$ref": "#/components/schemas/User"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Utilisateur non trouvé"
+          }
+        }
+      },
+      "delete": {
+        "summary": "Supprimer un utilisateur",
+        "tags": [
+          "Users"
+        ],
+        "security": [
+          {
+            "ServiceAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "in": "path",
+            "name": "id",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "description": "ID de l'utilisateur"
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "Utilisateur supprimé avec succès"
+          },
+          "404": {
+            "description": "Utilisateur non trouvé"
+          }
+        }
+      }
+    },
+    "/api/v1/users/{id}/verify-password": {
+      "post": {
+        "summary": "Vérifier un mot de passe",
+        "tags": [
+          "Users"
+        ],
+        "security": [
+          {
+            "ServiceAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "in": "path",
+            "name": "id",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "description": "ID de l'utilisateur"
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": [
+                  "password"
+                ],
+                "properties": {
+                  "password": {
+                    "type": "string",
+                    "description": "Mot de passe à vérifier"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Résultat de la vérification",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "success": {
+                      "type": "boolean"
+                    },
+                    "data": {
+                      "type": "object",
+                      "properties": {
+                        "isValid": {
+                          "type": "boolean"
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  },
+  "tags": [
+    {
+      "name": "Keys",
+      "description": "Gestion des clés de signature JWT (JWKS)"
+    },
+    {
+      "name": "Users",
+      "description": "Gestion des utilisateurs"
+    }
+  ]
+}
