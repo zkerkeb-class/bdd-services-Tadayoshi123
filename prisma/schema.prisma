@@ -1,0 +1,106 @@
+// bdd-services-Tadayoshi123/prisma/schema.prisma
+// Schéma Prisma pour le microservice de base de données SupervIA
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id            String    @id @default(uuid())
+  email         String    @unique
+  password      String
+  firstName     String?
+  lastName      String?
+  picture       String?
+  active        Boolean   @default(true)
+  emailVerified Boolean   @default(false)
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+  roles         Role[]    @default([USER])
+  refreshTokens RefreshToken[]
+  clients       Client[]
+  dashboards    Dashboard[]
+
+  // Champs pour l'authentification OAuth
+  provider      String?
+  providerId    String?
+
+  // Champs pour la gestion des abonnements Stripe
+  stripeCustomerId      String?   @unique
+  subscriptionType      String?
+  subscriptionStatus    String?
+  subscriptionStartDate DateTime?
+  subscriptionEndDate   DateTime?
+
+  @@unique([provider, providerId])
+  @@map("users")
+}
+
+model Dashboard {
+  id          String   @id @default(uuid())
+  name        String
+  description String?
+  layout      Json
+  isPublic    Boolean  @default(false)
+  userId      String
+  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@map("dashboards")
+}
+
+model RefreshToken {
+  id        String   @id @default(uuid())
+  token     String   @unique
+  userId    String
+  clientId  String?
+  issuedAt  DateTime @default(now())
+  expiresAt DateTime
+  revokedAt DateTime?
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  client    Client?  @relation(fields: [clientId], references: [id])
+
+  @@map("refresh_tokens")
+}
+
+model Client {
+  id           String    @id @default(uuid())
+  name         String
+  clientId     String    @unique
+  clientSecret String
+  redirectUris String[]
+  allowedScopes String[]
+  ownerId      String
+  owner        User      @relation(fields: [ownerId], references: [id], onDelete: Cascade)
+  refreshTokens RefreshToken[]
+  createdAt    DateTime  @default(now())
+  updatedAt    DateTime  @updatedAt
+  active       Boolean   @default(true)
+  
+  @@map("clients")
+}
+
+enum Role {
+  USER
+  ADMIN
+  MODERATOR
+}
+
+model Key {
+  id        String   @id @default(uuid())
+  kid       String   @unique @default(uuid())
+  publicKey String   @db.Text
+  privateKey String  @db.Text
+  algorithm String   @default("RS256")
+  status    String   @default("active") // 'active', 'revoked', 'deprecated'
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@map("keys")
+} 
